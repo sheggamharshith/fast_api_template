@@ -1,9 +1,9 @@
 from .base import BaseSettings
 
 
-class LocalSetting(BaseSettings):
+class ProductionSetting(BaseSettings):
     pass
 
 
 if __name__ == "__main__":
-    LocalSetting()
+    ProductionSetting()
