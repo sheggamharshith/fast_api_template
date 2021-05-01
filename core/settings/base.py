@@ -2,6 +2,7 @@ from pydantic import (
     BaseSettings,
     PostgresDsn,
     Field,
+    AnyHttpUrl,
 )
 from typing import (List)
 import os
@@ -35,12 +36,22 @@ class BaseSettings(BaseSettings):
     base_dir: str = os.path.dirname(os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))))
 
+
+    #--cors---
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost.tiangolo.com",
+                                              "https://localhost.tiangolo.com",
+                                              "http://localhost",
+                                              "http://localhost:8080", ]
+
     # --- debug -----
     debug: bool = False
 
     # ---  CORS ---
 
     # ---- JWT -----
+
+    jwt_secret_key: str = Field(..., env='JWT_SECRET_KEY')
+    jwt_algo : str = Field(..., env='JWT_ALGORITHM')
 
     # --- EMail ----
 

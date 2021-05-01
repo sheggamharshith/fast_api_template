@@ -11,6 +11,8 @@ python_version = "3.8"
 [packages]
 SQLAlchemy = "*"
 alembic = "*"
+psycopg2 = "*"
+pyjwt = "*"
 
 [packages.fastapi]
 extras = [ "all",]

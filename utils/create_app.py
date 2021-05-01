@@ -13,9 +13,9 @@ def get_general_folder_schema():
     """
 
     dir_schema = {
-        "folders": ["models", "seralizer", "test"],
+        "folders": ["test"],
         "default_file_in_folder": ["__init__.py"],
-        "files_base": ["urls.py", "__init__.py"]
+        "files_base": ["urls.py", "__init__.py",'models.py','schemas.py']
     }
 
     return dir_schema
@@ -66,6 +66,6 @@ def create_app(app: str, root: bool) -> "directory":
 
 if __name__ == "__main__":
     try:
-        create_app("app2", False)
+        create_app("app", False)
     except Exception as e:
         logging.error(f'{e.args[0]}')

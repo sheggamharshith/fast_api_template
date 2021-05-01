@@ -1,60 +1,66 @@
-if True:
-    import sys
-    import os
-    sys.path.append(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))))
+import os 
+import sys
 
-from typing import List
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+
+from fastapi import Depends, FastAPI, Request, Response
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
+ 
+from functools import lru_cache
+from .settings.base import BaseSettings
 
-from db.database import SessionLocal, engine
-from db import crud, models, schemas
+from .db.database import SessionLocal
 
+from apps.user.urls import user_router
+from apps.auth.urls import auth_router
+
+import time
+
+
+import uvicorn
+
+@lru_cache()
+def get_settings():
+    return BaseSettings()
+
+
+
+settings = get_settings()
 
 app = FastAPI()
 
-
-# Dependency
-def get_db():
-    db = SessionLocal()
+#middle ware support
+@app.middleware("http")
+async def db_session_middleware(request: Request, call_next):
+    response = Response("Internal server error", status_code=500)
     try:
-        yield db
+        request.state.db = SessionLocal()
+        response = await call_next(request)
+    except Exception as e :
+        print(e)
     finally:
-        db.close()
+        request.state.db.close()
+    return response
 
 
-@app.post("/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, request: Request, db: Session = Depends(get_db)):
-    print()
-    db_user = crud.get_user_by_email(request.state.db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    return crud.create_user(db=db, user=user)
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
+
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin)
+                       for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
-@app.get("/users/", response_model=List[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = crud.get_users(db, skip=skip, limit=limit)
-    return users
-
-
-@app.get("/users/{user_id}", response_model=schemas.User)
-def read_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = crud.get_user(db, user_id=user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user
-
-
-@app.post("/users/{user_id}/items/", response_model=schemas.Item)
-def create_item_for_user(
-    user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
-):
-    return crud.create_user_item(db=db, item=item, user_id=user_id)
-
-
-@app.get("/items/", response_model=List[schemas.Item])
-def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    items = crud.get_items(db, skip=skip, limit=limit)
-    return items
+app.include_router(user_router)
+app.include_router(auth_router)
